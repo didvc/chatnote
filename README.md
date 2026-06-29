@@ -8,6 +8,27 @@
 
 Your own note-to-self chatrooms — infinite rooms, like a private Telegram "Saved Messages". Self-hosted, open-source, Astro SSR + Prisma/SQLite.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="screenshots/room-list.png" alt="Room list — persistent, ephemeral, incognito rooms with tags" width="480"/></td>
+    <td><img src="screenshots/room-messages.png" alt="Room view — Markdown messages with headers, lists, code, links" width="480"/></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Room list — all three room types, tags visible</em></td>
+    <td align="center"><em>Persistent room — Markdown rendered server-side</em></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/search.png" alt="Search across rooms, messages and tags" width="480"/></td>
+    <td><img src="screenshots/composer.png" alt="Composer — type Markdown, attach images, Ctrl+Enter to send" width="480"/></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Search across rooms, messages, and tags</em></td>
+    <td align="center"><em>Composer — Markdown, image attach, Ctrl+Enter to send</em></td>
+  </tr>
+</table>
+
 ## Room types
 
 | Type | Storage | Lifetime |
