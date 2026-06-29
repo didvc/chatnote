@@ -1,0 +1,117 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { listRooms } from "../lib/store";
+
+const user = Astro.locals.user!;
+const q = Astro.url.searchParams.get("q") || "";
+const error = Astro.url.searchParams.get("error") || "";
+const rooms = await listRooms(user.id, q);
+
+function ago(ts: number) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  return Math.floor(s / 86400) + "d ago";
+}
+---
+
+<Layout title="chatnote">
+  {error && <p class="error">{error}</p>}
+
+  <div class="card">
+    <form method="post" action="/api/rooms">
+      <div class="row">
+        <div style="flex:2">
+          <label>new room</label>
+          <input name="name" placeholder="room name" required />
+        </div>
+        <div class="grow0" style="min-width:150px">
+          <label>type</label>
+          <select name="kind" id="kind">
+            <option value="persistent">persistent (saved)</option>
+            <option value="ephemeral">ephemeral (in memory)</option>
+            <option value="incognito">incognito (until tab closes)</option>
+          </select>
+        </div>
+        <div class="grow0 hidden" id="ttlWrap" style="min-width:120px">
+          <label>ttl (blank = until restart)</label>
+          <input name="ttl" placeholder="e.g. 1h, 30m" />
+        </div>
+        <div class="grow0">
+          <button class="btn" type="submit">create</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <form method="get" class="row" style="margin-bottom:14px">
+    <input name="q" value={q} placeholder="search rooms, messages, tags…" />
+    <button class="btn-sm grow0" type="submit">search</button>
+    {q && <a class="btn-sm grow0" href="/">clear</a>}
+    <label class="btn-sm grow0" style="cursor:pointer">
+      import json
+      <input type="file" id="importFile" accept="application/json" class="hidden" />
+    </label>
+  </form>
+
+  <div class="section-title">rooms {q && `· matching "${q}"`}</div>
+  {rooms.length === 0 && <div class="empty">no rooms yet — create one above.</div>}
+  <div class="room-list">
+    {
+      rooms.map((r) => (
+        <div class="room-item" data-id={r.id}>
+          <a class="room-main" href={`/room/${r.id}`}>
+            <div class="room-name">{r.name}</div>
+            <div class="room-meta">
+              <span class={`badge ${r.kind}`}>{r.kind}</span>
+              <span>{r.messageCount} msgs</span>
+              <span>{ago(r.createdAt)}</span>
+              {r.tags.map((t) => (
+                <span class="tag">#{t}</span>
+              ))}
+            </div>
+          </a>
+          <button class="btn-sm btn-danger del-room" data-id={r.id}>delete</button>
+        </div>
+      ))
+    }
+  </div>
+</Layout>
+
+<script>
+  const kind = document.getElementById("kind") as HTMLSelectElement | null;
+  const ttlWrap = document.getElementById("ttlWrap");
+  kind?.addEventListener("change", () => {
+    ttlWrap?.classList.toggle("hidden", kind.value !== "ephemeral");
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".del-room").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (!confirm("delete this room?")) return;
+      const id = btn.dataset.id!;
+      const res = await fetch(`/api/rooms/${id}`, { method: "DELETE" });
+      if (res.ok) btn.closest(".room-item")?.remove();
+    });
+  });
+
+  const importFile = document.getElementById("importFile") as HTMLInputElement | null;
+  importFile?.addEventListener("change", async () => {
+    const file = importFile.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const res = await fetch("/api/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: text,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      alert(`imported ${data.imported} room(s)`);
+      location.reload();
+    } else {
+      alert(data.error || "import failed");
+    }
+  });
+</script>

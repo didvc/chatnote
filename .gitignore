@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+.astro/
+config.toml
+*.log
+blueprint*
+.simple-ots/
+agent-references/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+2026-*
+SPEC.md
+test-results/

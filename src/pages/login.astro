@@ -1,0 +1,22 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { config } from "../config";
+
+if (!config.require_password || Astro.locals.user) return Astro.redirect("/");
+const error = Astro.url.searchParams.get("error") || "";
+---
+
+<Layout title="login · chatnote">
+  <div class="auth">
+    <div class="card">
+      <h2 style="margin:0">log in</h2>
+      {error && <p class="error">{error}</p>}
+      <form method="post" action="/api/auth/login">
+        <div><label>username</label><input name="username" autocomplete="username" required /></div>
+        <div><label>password</label><input name="password" type="password" autocomplete="current-password" required /></div>
+        <button class="btn" type="submit" style="width:100%">log in</button>
+      </form>
+      <p class="muted">no account? <a href="/register">register</a></p>
+    </div>
+  </div>
+</Layout>

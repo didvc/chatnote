@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: chatnote
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - alias: didvc
+repository-code: https://github.com/didvc/chatnote
+url: https://didvc.github.io/chatnote/
+license: Apache-2.0
+version: 0.1.0
+date-released: 2026-06-29
+abstract: >
+  chatnote is a self-hosted, multi-user note-to-self web app built with
+  Astro SSR and SQLite. It organizes notes as infinite chatrooms with three
+  room types: persistent (SQLite), ephemeral (in-memory with TTL), and
+  incognito (in-memory, cleared on tab close). Supports Markdown, image
+  attachments, room tags, full-text search, and JSON import/export.
+keywords:
+  - notes
+  - self-hosted
+  - astro
+  - sqlite
+  - markdown
+  - chatroom
+  - ephemeral
+  - incognito
+  - nodejs
+  - prisma

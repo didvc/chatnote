@@ -1,0 +1,21 @@
+# chatnote server config. Copy to config.toml and edit.
+# Loaded once at server launch.
+
+# Require login. Set false for a public demo (anonymous per-visitor users, no login screen).
+require_password = true
+
+# Allow image uploads. Set false on a public demo to remove the heap/abuse vector.
+allow_image_uploads = true
+
+# Allow server-side link previews (persistent rooms only; never in ephemeral/incognito).
+allow_link_previews = true
+
+# Wipe ALL persistent data on an interval. "off" or e.g. "1d", "12h", "30m". Good for demos.
+wipe_persistent_every = "off"
+
+[caps]
+max_rooms_per_user      = 200
+max_messages_per_room   = 5000
+max_message_chars       = 20000
+max_image_bytes         = 2000000   # 2 MB per image
+max_mem_room_bytes      = 50000000  # 50 MB total heap budget per in-memory room

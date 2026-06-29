@@ -1,0 +1,229 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getRoom } from "../../lib/store";
+import { config } from "../../config";
+
+const user = Astro.locals.user!;
+const id = Astro.params.id!;
+const room = await getRoom(user.id, id);
+if (!room) return Astro.redirect("/");
+
+function time(ts: number) {
+  return new Date(ts).toLocaleString();
+}
+---
+
+<Layout title={`${room.name} · chatnote`}>
+  <div class="room-head">
+    <div>
+      <a href="/" class="muted">← rooms</a>
+      <h2 style="margin:4px 0 0">
+        {room.name} <span class={`badge ${room.kind}`}>{room.kind}</span>
+      </h2>
+      {
+        room.kind === "persistent" && (
+          <div class="room-meta" style="margin-top:6px">
+            <span class="muted">tags:</span>
+            <input
+              id="tags"
+              value={room.tags.join(", ")}
+              placeholder="comma,separated"
+              style="max-width:260px;padding:4px 8px"
+            />
+            <button class="btn-sm grow0" id="saveTags">save</button>
+          </div>
+        )
+      }
+      {
+        room.kind !== "persistent" && (
+          <p class="muted" style="margin:6px 0 0">
+            in-memory · not saved to disk · lost on server restart
+          </p>
+        )
+      }
+    </div>
+  </div>
+
+  <div class="messages" id="messages">
+    {
+      room.messages.map((m) => (
+        <div class="msg" data-id={m.id}>
+          <div class="body" set:html={m.html} />
+          {m.attach.length > 0 && (
+            <div class="attach">
+              {m.attach.map((a) => (
+                <img src={a.url} alt={a.name} />
+              ))}
+            </div>
+          )}
+          {m.preview && (
+            <a class="preview" href={m.preview.url} target="_blank" rel="noopener noreferrer nofollow">
+              {m.preview.title && <div class="pv-title">{m.preview.title}</div>}
+              {m.preview.description && <div class="pv-desc">{m.preview.description}</div>}
+            </a>
+          )}
+          <div class="msg-time">
+            <span>{time(m.createdAt)}</span>
+            <button class="msg-del" data-id={m.id}>delete</button>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="composer">
+    <div class="box">
+      <textarea id="input" rows="1" placeholder="message (markdown supported)…"></textarea>
+      <div class="acts">
+        {
+          config.allow_image_uploads && (
+            <label class="btn-sm" style="cursor:pointer" title="attach image">
+              📎
+              <input type="file" id="imgInput" accept="image/*" class="hidden" />
+            </label>
+          )
+        }
+        <button class="btn" id="send">send</button>
+      </div>
+    </div>
+    <div id="pending" class="muted" style="margin:6px 2px 0"></div>
+  </div>
+</Layout>
+
+<script define:vars={{ roomId: id, kind: room.kind, canPreview: config.allow_link_previews }}>
+  const messages = document.getElementById("messages");
+  const input = document.getElementById("input");
+  const send = document.getElementById("send");
+  const pending = document.getElementById("pending");
+  const imgInput = document.getElementById("imgInput");
+  let attach = [];
+
+  // incognito: wipe in-memory rooms when the tab goes away
+  if (kind === "incognito") {
+    window.addEventListener("pagehide", () => {
+      navigator.sendBeacon("/api/incognito/clear");
+    });
+  }
+
+  function esc(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function autosize() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+  }
+  input.addEventListener("input", autosize);
+
+  function renderPending() {
+    pending.innerHTML = attach
+      .map((a, i) => `<span>📎 ${esc(a.name)} <a href="#" data-i="${i}" class="rm">×</a></span>`)
+      .join(" &nbsp; ");
+    pending.querySelectorAll(".rm").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        attach.splice(Number(el.dataset.i), 1);
+        renderPending();
+      }),
+    );
+  }
+
+  imgInput?.addEventListener("change", async () => {
+    const file = imgInput.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("roomId", roomId);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (res.ok) {
+      attach.push(data);
+      renderPending();
+    } else {
+      alert(data.error || "upload failed");
+    }
+    imgInput.value = "";
+  });
+
+  function addMessageNode({ id, html, attach, preview }) {
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.dataset.id = id;
+    let inner = `<div class="body">${html}</div>`;
+    if (attach && attach.length) {
+      inner += `<div class="attach">${attach.map((a) => `<img src="${esc(a.url)}" alt="${esc(a.name)}">`).join("")}</div>`;
+    }
+    if (preview) {
+      inner += `<a class="preview" href="${esc(preview.url)}" target="_blank" rel="noopener noreferrer nofollow">${
+        preview.title ? `<div class="pv-title">${esc(preview.title)}</div>` : ""
+      }${preview.description ? `<div class="pv-desc">${esc(preview.description)}</div>` : ""}</a>`;
+    }
+    inner += `<div class="msg-time"><span>${new Date().toLocaleString()}</span><button class="msg-del" data-id="${id}">delete</button></div>`;
+    div.innerHTML = inner;
+    bindDelete(div.querySelector(".msg-del"));
+    messages.appendChild(div);
+    div.scrollIntoView({ block: "end" });
+  }
+
+  async function submit() {
+    const body = input.value.trim();
+    if (!body && attach.length === 0) return;
+    send.disabled = true;
+    const res = await fetch(`/api/rooms/${roomId}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body, attach }),
+    });
+    const data = await res.json();
+    send.disabled = false;
+    if (!res.ok) {
+      alert(data.error || "failed");
+      return;
+    }
+    addMessageNode({ id: data.id, html: data.html, attach: data.attach, preview: data.preview });
+    input.value = "";
+    attach = [];
+    renderPending();
+    autosize();
+    input.focus();
+  }
+
+  send.addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submit();
+    }
+  });
+
+  function bindDelete(btn) {
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      // in-memory messages can't be individually deleted server-side; just hide locally
+      if (String(roomId).startsWith("mem_")) {
+        btn.closest(".msg")?.remove();
+        return;
+      }
+      const res = await fetch(`/api/messages/${id}`, { method: "DELETE" });
+      if (res.ok) btn.closest(".msg")?.remove();
+    });
+  }
+  document.querySelectorAll(".msg-del").forEach(bindDelete);
+
+  // tags
+  const saveTags = document.getElementById("saveTags");
+  saveTags?.addEventListener("click", async () => {
+    const tags = document.getElementById("tags").value.split(",").map((s) => s.trim()).filter(Boolean);
+    const res = await fetch(`/api/rooms/${roomId}/tags`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tags }),
+    });
+    saveTags.textContent = res.ok ? "saved ✓" : "error";
+    setTimeout(() => (saveTags.textContent = "save"), 1200);
+  });
+
+  messages.scrollIntoView({ block: "end" });
+  input.focus();
+</script>

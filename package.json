@@ -1,0 +1,33 @@
+{
+  "name": "chatnote",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "postinstall": "prisma generate",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^8.3.4",
+    "@iarna/toml": "^2.2.5",
+    "@prisma/client": "^5.22.0",
+    "astro": "^4.16.18",
+    "cookie": "^1.0.2",
+    "markdown-it": "^14.1.0",
+    "sanitize-html": "^2.13.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/markdown-it": "^14.1.2",
+    "@types/sanitize-html": "^2.13.0",
+    "prisma": "^5.22.0",
+    "vitepress": "^1.6.3"
+  }
+}

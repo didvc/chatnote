@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/chatnote.db"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  // null for anonymous (no-password / demo) users
+  password  String?
+  anonymous Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  rooms     Room[]
+  sessions  Session[]
+}
+
+model Session {
+  token     String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// Only PERSISTENT rooms live in the DB. Ephemeral/incognito rooms live in heap.
+model Room {
+  id        String    @id @default(cuid())
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+  tags      RoomTag[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  body      String
+  // JSON array of { url, name, mime } for image attachments
+  attach    String?
+  // JSON for an optional link preview { url, title, description, image }
+  preview   String?
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  rooms RoomTag[]
+}
+
+model RoomTag {
+  roomId String
+  tagId  String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, tagId])
+}
