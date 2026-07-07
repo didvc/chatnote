@@ -81,3 +81,13 @@ Key flags:
 ## License
 
 Apache-2.0
+
+<!-- BEGIN gh-mutual-linking -->
+
+---
+
+### Related projects
+
+- [**visited**](https://github.com/didvc/visited) — Securely collect browsing history over browsers.
+- [**dead-mans-ping**](https://github.com/didvc/dead-mans-ping) — Cross-platform CLI that HTTP-GET pings endpoints on mouse (in)activity — dead-man's switch, presence beacon, idle notifier.
+<!-- END gh-mutual-linking -->
